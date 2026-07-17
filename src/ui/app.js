@@ -2,6 +2,7 @@ import { activateSpell, attack, createGame, endTurn, enterBattlePhase, getCardAt
 import { runCpuTurn } from "../core/cpu.js";
 import { clearSave, loadTurnStart, saveTurnStart } from "../core/storage.js";
 import { applyLayout } from "./layout.js";
+import { getNextGuidance, loadHintsEnabled, saveHintsEnabled } from "./guidance.js";
 
 const [cards, decks, layoutData] = await Promise.all([
   fetch("src/data/cards.json").then((response) => response.json()),
@@ -9,13 +10,14 @@ const [cards, decks, layoutData] = await Promise.all([
   fetch("src/data/layout.json").then((response) => response.json())
 ]);
 
-const elements = Object.fromEntries(["battlefield","slot-layer","effect-layer","hand","message","log","cpu-life","player-life","cpu-deck","player-deck","cpu-grave","player-grave","battle-phase","direct-attack","end-turn","attack-position","set-position","activate","debug-toggle","start-dialog","resume-game","new-game","result-dialog","result-title","result-reason","restart-game"].map((id) => [id, document.getElementById(id)]));
+const elements = Object.fromEntries(["battlefield","slot-layer","effect-layer","hand","message","next-hint","log","cpu-life","player-life","cpu-deck","player-deck","cpu-grave","player-grave","battle-phase","direct-attack","end-turn","attack-position","set-position","activate","debug-toggle","start-dialog","resume-game","new-game","result-dialog","result-title","result-reason","restart-game","help-dialog","help-open","help-close","help-start","hints-toggle"].map((id) => [id, document.getElementById(id)]));
 const cardMap = Object.fromEntries(cards.map((card) => [card.id, card]));
 const slotElements = new Map();
 let state = null;
 let selection = { handIndex: null, attackerSlot: null, targetSlot: null, tributeSlots: [], summonPosition: "attack" };
 const query = new URLSearchParams(location.search);
 let debugVisible = query.get("debug") === "1";
+let hintsEnabled = loadHintsEnabled();
 
 function resetSelection() {
   selection = { handIndex: null, attackerSlot: null, targetSlot: null, tributeSlots: [], summonPosition: "attack" };
@@ -92,11 +94,36 @@ function renderHand() {
       selection.tributeSlots = [];
       selection.targetSlot = null;
       const card = cardMap[item.cardId];
-      setMessage(card.type === "monster" ? `${card.name}：素材を選び、空いているモンスター枠をタップ` : `${card.name}：空いている魔法・罠枠で伏せるか、効果発動`);
+      setMessage(`${card.name} — ${card.text}`);
       render();
     });
     elements.hand.append(button);
   });
+}
+
+function clearGuidanceTargets() {
+  document.querySelectorAll(".guided-next").forEach((element) => element.classList.remove("guided-next"));
+}
+
+function guidanceElements(target) {
+  if (target.startsWith("hand-")) return [elements.hand.children[Number(target.split("-")[1])]].filter(Boolean);
+  if (target.startsWith("player-monster-")) return [slotElements.get(slotId("player", "monster", Number(target.split("-")[2])))].filter(Boolean);
+  if (target === "open-player-monsters") return [...slotElements.values()].filter((element) => element.dataset.actor === "player" && element.dataset.zoneType === "monster" && !element.classList.contains("occupied"));
+  if (target === "player-monsters") return [...slotElements.values()].filter((element) => element.dataset.actor === "player" && element.dataset.zoneType === "monster" && element.classList.contains("occupied"));
+  if (target === "cpu-monsters") return [...slotElements.values()].filter((element) => element.dataset.actor === "cpu" && element.dataset.zoneType === "monster" && element.classList.contains("occupied"));
+  if (target === "open-player-backrow") return [...slotElements.values()].filter((element) => element.dataset.actor === "player" && element.dataset.zoneType === "spell-trap" && !element.classList.contains("occupied"));
+  return [elements[target]].filter(Boolean);
+}
+
+function renderGuidance() {
+  clearGuidanceTargets();
+  elements["next-hint"].hidden = !hintsEnabled;
+  elements["hints-toggle"].textContent = `ヒント ${hintsEnabled ? "ON" : "OFF"}`;
+  elements["hints-toggle"].setAttribute("aria-pressed", String(hintsEnabled));
+  if (!hintsEnabled || !state) return;
+  const guidance = getNextGuidance(state, selection);
+  elements["next-hint"].querySelector("span").textContent = guidance.text;
+  guidance.targets.flatMap(guidanceElements).forEach((element) => element.classList.add("guided-next"));
 }
 
 function selectedHandCard() {
@@ -175,9 +202,12 @@ function render() {
   elements["battle-phase"].disabled = !playerTurn || state.turn.phase !== "main";
   elements["direct-attack"].disabled = !playerTurn || state.turn.phase !== "battle" || selection.attackerSlot === null || state.players.cpu.monsters.some(Boolean);
   elements.activate.disabled = !playerTurn || selectedHandCard()?.type !== "spell";
+  elements.activate.title = elements.activate.disabled ? "手札の魔法カードを選ぶと使えます" : "選択中の魔法を使います";
+  elements["direct-attack"].title = elements["direct-attack"].disabled ? "バトル中に攻撃モンスターを選び、相手の場が空の時に使えます" : "相手へ直接攻撃します";
   document.body.classList.toggle("debug-layout", debugVisible);
   elements["debug-toggle"].setAttribute("aria-pressed", String(debugVisible));
   positionSlots();
+  renderGuidance();
   if (state.winner && !elements["result-dialog"].open) {
     clearSave();
     elements["result-title"].textContent = state.winner === "player" ? "勝利" : "敗北";
@@ -192,6 +222,7 @@ function startNewGame() {
   saveTurnStart(state);
   elements["start-dialog"].close();
   render();
+  if (!query.has("autostart") && localStorage.getItem("hyakki-fuda-gassen-help-seen") !== "yes") elements["help-dialog"].showModal();
 }
 
 elements["attack-position"].addEventListener("click", () => { selection.summonPosition = "attack"; setMessage("攻撃表示：空いているモンスター枠をタップ"); });
@@ -216,6 +247,10 @@ elements["end-turn"].addEventListener("click", () => {
   } catch (error) { setMessage(error.message, true); }
 });
 elements["debug-toggle"].addEventListener("click", () => { debugVisible = !debugVisible; render(); });
+elements["help-open"].addEventListener("click", () => elements["help-dialog"].showModal());
+elements["help-close"].addEventListener("click", () => { localStorage.setItem("hyakki-fuda-gassen-help-seen", "yes"); elements["help-dialog"].close(); });
+elements["help-start"].addEventListener("click", () => { hintsEnabled = true; saveHintsEnabled(true); localStorage.setItem("hyakki-fuda-gassen-help-seen", "yes"); elements["help-dialog"].close(); render(); });
+elements["hints-toggle"].addEventListener("click", () => { hintsEnabled = !hintsEnabled; saveHintsEnabled(hintsEnabled); renderGuidance(); });
 elements["new-game"].addEventListener("click", startNewGame);
 elements["restart-game"].addEventListener("click", () => { elements["result-dialog"].close(); startNewGame(); });
 elements["resume-game"].addEventListener("click", () => { state = loadTurnStart(); elements["start-dialog"].close(); render(); });

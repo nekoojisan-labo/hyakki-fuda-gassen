@@ -8,12 +8,18 @@
   <title>百鬼札合戦</title>
   <link rel="stylesheet" href="src/styles/game.css">
   <link rel="stylesheet" href="src/styles/responsive-fixes.css">
+  <link rel="stylesheet" href="src/styles/polish.css">
 </head>
 <body>
   <main id="game" class="game-shell" aria-live="polite">
     <header class="opponent-bar player-bar">
-      <div class="portrait cpu">逢</div>
+      <div class="game-title"><span>百鬼</span>札合戦</div>
+      <div class="portrait cpu"><img src="assets/characters/cpu-onmyoji.png" alt="逢魔の陰陽師"></div>
       <div><small>CPU</small><strong>逢魔の陰陽師</strong></div>
+      <div class="header-actions">
+        <button id="help-open" type="button">？ ルール</button>
+        <button id="hints-toggle" type="button" aria-pressed="true">ヒント ON</button>
+      </div>
       <div class="life"><span>LP</span><b id="cpu-life">4000</b></div>
     </header>
 
@@ -32,11 +38,12 @@
 
     <section class="command-dock">
       <div class="player-bar self-bar">
-        <div class="portrait player">符</div>
+        <div class="portrait player"><img src="assets/characters/player-onmyoji.png" alt="若き陰陽師"></div>
         <div><small>PLAYER</small><strong>あなた</strong></div>
         <div class="life"><span>LP</span><b id="player-life">4000</b></div>
       </div>
-      <div id="message" class="message">カードを選んでください</div>
+      <div id="next-hint" class="next-hint"><b>次の操作</b><span>光っているカードを選んでください</span></div>
+      <div id="message" class="message">カードを選ぶと、ここに能力と操作方法が表示されます</div>
       <div id="hand" class="hand" aria-label="手札"></div>
       <div class="commands">
         <button id="attack-position" type="button">攻撃表示</button>
@@ -61,6 +68,21 @@
     <h2 id="result-title">勝負あり</h2>
     <p id="result-reason"></p>
     <button id="restart-game" class="primary" type="button">もう一度戦う</button>
+  </dialog>
+
+  <dialog id="help-dialog" class="help-dialog">
+    <header><div><small>HOW TO PLAY</small><h2>百鬼札合戦のルール</h2></div><button id="help-close" type="button" aria-label="ヘルプを閉じる">×</button></header>
+    <section class="help-goal"><b>勝利条件</b><p>相手のLPを0にするか、相手が山札からカードを引けなくなれば勝利です。</p></section>
+    <div class="rule-grid">
+      <article><i>壱</i><h3>手札から召喚</h3><p>星4以下のモンスターを選び、自分側の金色のモンスター枠へ出します。通常召喚は1ターンに1回です。</p></article>
+      <article><i>弐</i><h3>上級モンスター</h3><p>星5・6は素材1体、星7・8は素材2体が必要です。先に自分の場の素材を選びます。</p></article>
+      <article><i>参</i><h3>表示形式</h3><p>攻撃表示は攻撃できます。裏側守備は正体を隠して守り、攻撃されると表になります。</p></article>
+      <article><i>肆</i><h3>魔法と罠</h3><p>魔法は手札から効果を発動できます。罠は魔法・罠枠へ伏せ、相手の攻撃に反応します。</p></article>
+      <article><i>伍</i><h3>バトル</h3><p>「バトルへ」→自分の攻撃表示モンスター→攻撃対象の順で選びます。相手がいなければ直接攻撃です。</p></article>
+      <article><i>陸</i><h3>ダメージ</h3><p>攻撃表示同士は低い側が破壊され、差がLPダメージになります。守備力が高い相手を攻撃すると差分を受けます。</p></article>
+    </div>
+    <section class="turn-flow"><b>1ターンの流れ</b><span>カードを引く</span><em>→</em><span>召喚・魔法・罠</span><em>→</em><span>攻撃</span><em>→</em><span>ターン終了</span></section>
+    <footer><button id="help-start" class="primary" type="button">ヒントを表示してゲームへ戻る</button></footer>
   </dialog>
 
   <script type="module" src="src/ui/app.js"></script>

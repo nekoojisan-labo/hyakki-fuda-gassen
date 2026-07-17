@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node scripts/serve.mjs",
+    "assets:extract": "bash scripts/extract-comp-assets.sh",
     "test": "node --test",
     "validate": "node scripts/validate-data.mjs && node scripts/validate-layout.mjs",
     "check": "npm run validate && npm test"

@@ -16,6 +16,17 @@ for (const [owner, deck] of Object.entries(decks)) {
 for (const card of cards) {
   try { await access(new URL(card.art, root)); } catch { errors.push(`${card.id}の画像がありません: ${card.art}`); }
 }
+for (const asset of [
+  "assets/backgrounds/shrine-battlefield.svg",
+  "assets/characters/cpu-onmyoji.png",
+  "assets/characters/player-onmyoji.png",
+  "assets/ui/card-back.svg",
+  "assets/ui/card-frame.svg",
+  "assets/effects/slash.svg",
+  "assets/effects/burst.svg"
+]) {
+  try { await access(new URL(asset, root)); } catch { errors.push(`画面パーツがありません: ${asset}`); }
+}
 if (errors.length) {
   console.error(errors.join("\n"));
   process.exitCode = 1;

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { attack, beginTurn, createGame, enterBattlePhase, getTributeCount, summonMonster } from "../src/core/game.js";
+import { activateSpell, attack, beginTurn, createGame, enterBattlePhase, getTributeCount, setBackrow, summonMonster } from "../src/core/game.js";
 
 const cards = JSON.parse(await readFile(new URL("../src/data/cards.json", import.meta.url)));
 const decks = JSON.parse(await readFile(new URL("../src/data/decks.json", import.meta.url)));
@@ -54,4 +54,24 @@ test("running out of cards causes a deck-out loss", () => {
   const result = beginTurn(state, "cpu");
   assert.equal(result.winner, "player");
   assert.match(result.reason, /ドローできません/);
+});
+
+test("draw spell resolves from hand and moves to the graveyard", () => {
+  const state = createGame({ cards, decks, seed: 5 });
+  state.players.player.hand = [{ uid: "spell", cardId: "night-parade" }];
+  const result = activateSpell(state, { actor: "player", handIndex: 0 });
+  assert.equal(result.players.player.hand.length, 2);
+  assert.equal(result.players.player.graveyard.at(-1).cardId, "night-parade");
+});
+
+test("a previously set barrier trap negates an attack", () => {
+  let state = createGame({ cards, decks, seed: 6 });
+  state.players.player.hand = [{ uid: "trap", cardId: "barrier-return" }];
+  state = setBackrow(state, { actor: "player", handIndex: 0, zoneIndex: 0 });
+  state.turn = { number: 3, actor: "cpu", phase: "battle" };
+  state.players.cpu.monsters[0] = { uid: "attacker", cardId: "great-tengu", position: "attack", faceDown: false, attacked: false, attackMod: 0 };
+  const result = attack(state, { actor: "cpu", attackerSlot: 0 });
+  assert.equal(result.players.player.life, 4000);
+  assert.equal(result.players.player.backrow[0], null);
+  assert.equal(result.players.cpu.monsters[0].attacked, true);
 });

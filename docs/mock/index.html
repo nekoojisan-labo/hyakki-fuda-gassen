@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>百鬼札合戦 — 対戦画面モック</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #08090b;
+      --panel: #111317;
+      --red: #8f2525;
+      --red-bright: #d05242;
+      --gold: #d5b46b;
+      --paper: #e8dcc2;
+      --muted: #918b7c;
+      --line: rgba(213, 180, 107, .32);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--paper);
+      font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+      background:
+        radial-gradient(circle at 50% 46%, rgba(112, 23, 23, .34), transparent 36%),
+        repeating-linear-gradient(115deg, transparent 0 12px, rgba(255,255,255,.012) 13px 14px),
+        var(--ink);
+    }
+
+    .design-comp {
+      display: block;
+      width: 100%;
+      min-height: 100vh;
+      object-fit: contain;
+      object-position: top center;
+      background: #08090b;
+    }
+
+    .game { display: none !important; }
+
+    .game {
+      width: min(1180px, 100%);
+      min-height: 100vh;
+      margin: auto;
+      padding: 14px 18px 18px;
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      gap: 10px;
+    }
+
+    .topbar, .playerbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .identity { display: flex; align-items: center; gap: 12px; }
+    .crest {
+      width: 46px;
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--gold);
+      border-radius: 50%;
+      color: var(--gold);
+      background: #17100f;
+      box-shadow: 0 0 18px rgba(180, 42, 32, .28);
+      font-size: 21px;
+    }
+
+    .name { font-size: 15px; letter-spacing: .12em; }
+    .sub { color: var(--muted); font: 11px/1.4 system-ui, sans-serif; }
+    .life { display: flex; align-items: baseline; gap: 8px; }
+    .life b { color: var(--gold); font-size: 28px; letter-spacing: .05em; }
+    .life span { color: var(--muted); font: 11px system-ui, sans-serif; }
+
+    .enemy-hand { display: flex; justify-content: center; height: 54px; }
+    .back {
+      width: 38px;
+      height: 52px;
+      margin-left: -8px;
+      border: 1px solid #816338;
+      border-radius: 4px;
+      background: repeating-radial-gradient(circle, #3f1717 0 2px, #161112 3px 6px);
+      box-shadow: 0 4px 8px #0009;
+    }
+
+    .board {
+      position: relative;
+      overflow: hidden;
+      min-height: 480px;
+      padding: 20px 74px;
+      border: 1px solid var(--line);
+      background:
+        linear-gradient(rgba(11, 13, 15, .5), rgba(11, 13, 15, .72)),
+        radial-gradient(ellipse at center, #4b2921 0, #1a1816 48%, #0c0d0f 100%);
+      box-shadow: inset 0 0 80px #000;
+    }
+
+    .board::before {
+      content: "陰　陽";
+      position: absolute;
+      inset: 50% auto auto 50%;
+      transform: translate(-50%, -50%) rotate(-8deg);
+      color: rgba(213, 180, 107, .06);
+      font-size: clamp(70px, 13vw, 150px);
+      white-space: nowrap;
+    }
+
+    .turn {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: grid;
+      gap: 7px;
+      color: #706c63;
+      font: 10px system-ui, sans-serif;
+      text-align: center;
+    }
+
+    .turn strong {
+      padding: 7px 5px;
+      border-left: 2px solid var(--red-bright);
+      color: var(--paper);
+      background: linear-gradient(90deg, #8f252544, transparent);
+    }
+
+    .end-turn {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 50px;
+      min-height: 88px;
+      border: 1px solid var(--gold);
+      color: var(--paper);
+      background: linear-gradient(#8f2525, #481515);
+      font-family: inherit;
+      letter-spacing: .1em;
+      writing-mode: vertical-rl;
+    }
+
+    .half { position: relative; display: grid; gap: 9px; }
+    .half.enemy { margin-bottom: 25px; }
+    .half.player { margin-top: 25px; }
+    .row { display: grid; grid-template-columns: repeat(3, 82px); justify-content: center; gap: 18px; }
+    .zones { opacity: .72; }
+    .zone {
+      height: 112px;
+      border: 1px solid rgba(213, 180, 107, .25);
+      border-radius: 5px;
+      background: rgba(3, 4, 5, .25);
+      box-shadow: inset 0 0 20px #0008;
+    }
+    .zones .zone { height: 48px; border-style: dashed; }
+
+    .card {
+      position: relative;
+      height: 112px;
+      overflow: hidden;
+      border: 2px solid #b99652;
+      border-radius: 5px;
+      background: linear-gradient(155deg, #514426, #17120c 36%, #1c1010);
+      box-shadow: 0 7px 16px #000b;
+    }
+
+    .card .art {
+      height: 70px;
+      display: grid;
+      place-items: center;
+      font-size: 36px;
+      background: radial-gradient(circle, #9d3e2c 0, #321718 52%, #0f0d10 100%);
+    }
+    .card .label { padding: 5px 6px; font-size: 10px; letter-spacing: .08em; }
+    .card .stats {
+      position: absolute;
+      right: 4px;
+      bottom: 3px;
+      color: var(--gold);
+      font: 9px system-ui, sans-serif;
+    }
+    .card.defense { transform: rotate(90deg) scale(.73); }
+    .card.facedown { border-color: #6e5735; background: repeating-radial-gradient(circle, #4b1717 0 3px, #161112 4px 8px); }
+
+    .divider { height: 1px; background: linear-gradient(90deg, transparent, var(--red-bright), transparent); }
+
+    .hand-wrap { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 12px; }
+    .hand { display: flex; justify-content: center; align-items: end; height: 116px; }
+    .hand .card { width: 76px; flex: 0 0 76px; margin-left: -7px; transform-origin: bottom; }
+    .hand .card:nth-child(3) { transform: translateY(-9px); border-color: #f0c76b; box-shadow: 0 0 20px #b33b2c66; }
+
+    .hint {
+      width: 188px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      color: #c8bfae;
+      background: #0e0f12e8;
+      font: 11px/1.5 system-ui, sans-serif;
+    }
+    .hint b { display: block; color: var(--gold); margin-bottom: 3px; }
+
+    @media (max-width: 680px) {
+      .game { padding: 9px 8px 12px; gap: 7px; }
+      .name { font-size: 12px; }
+      .crest { width: 36px; font-size: 16px; }
+      .life b { font-size: 22px; }
+      .board { min-height: 470px; padding: 20px 48px; }
+      .row { grid-template-columns: repeat(3, 62px); gap: 10px; }
+      .zone, .card { height: 90px; }
+      .zones .zone { height: 40px; }
+      .card .art { height: 54px; font-size: 28px; }
+      .half.enemy { margin-bottom: 32px; }
+      .half.player { margin-top: 32px; }
+      .turn { left: 5px; }
+      .end-turn { right: 4px; width: 38px; min-height: 76px; }
+      .hand-wrap { display: block; }
+      .hand { height: 105px; overflow: hidden; }
+      .hand .card { width: 62px; flex-basis: 62px; }
+      .hint { width: 100%; margin-top: 7px; }
+    }
+  </style>
+</head>
+<body>
+  <img class="design-comp" src="assets/design-comp-v2.png" alt="百鬼札合戦のPC版とスマートフォン版の承認用デザインカンプ">
+  <main class="game" aria-label="百鬼札合戦 対戦画面の静的モック">
+    <header class="topbar">
+      <div class="identity">
+        <div class="crest" aria-hidden="true">鬼</div>
+        <div><div class="name">CPU　逢魔の陰陽師</div><div class="sub">山妖デッキ・手札5枚</div></div>
+      </div>
+      <div class="life"><span>LIFE</span><b>3,200</b></div>
+    </header>
+
+    <div class="enemy-hand" aria-label="相手の手札5枚">
+      <span class="back"></span><span class="back"></span><span class="back"></span><span class="back"></span><span class="back"></span>
+    </div>
+
+    <section class="board" aria-label="対戦盤面">
+      <div class="turn"><span>DRAW</span><span>MAIN</span><strong>BATTLE</strong><span>END</span></div>
+      <button class="end-turn" type="button">ターン終了</button>
+
+      <div class="half enemy">
+        <div class="row zones"><div class="zone"></div><div class="zone"></div><div class="zone"></div></div>
+        <div class="row">
+          <div class="card"><div class="art">👺</div><div class="label">大天狗</div><div class="stats">2300 / 1800</div></div>
+          <div class="card defense facedown" aria-label="裏側守備モンスター"></div>
+          <div class="zone"></div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="half player">
+        <div class="row">
+          <div class="card"><div class="art">🌪</div><div class="label">鎌鼬</div><div class="stats">1600 / 900</div></div>
+          <div class="zone"></div>
+          <div class="card defense"><div class="art">🏮</div><div class="label">提灯小僧</div><div class="stats">800 / 1400</div></div>
+        </div>
+        <div class="row zones"><div class="card facedown"></div><div class="zone"></div><div class="zone"></div></div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="playerbar">
+        <div class="identity">
+          <div class="crest" aria-hidden="true">符</div>
+          <div><div class="name">あなた　若き陰陽師</div><div class="sub">残り山札12枚・墓地3枚</div></div>
+        </div>
+        <div class="life"><span>LIFE</span><b>2,800</b></div>
+      </div>
+      <div class="hand-wrap">
+        <div class="hand" aria-label="自分の手札5枚">
+          <div class="card"><div class="art">🦊</div><div class="label">管狐</div><div class="stats">1200 / 700</div></div>
+          <div class="card"><div class="art">📜</div><div class="label">破魔の札</div></div>
+          <div class="card"><div class="art">🐍</div><div class="label">白蛇ノ神</div><div class="stats">2500 / 2100</div></div>
+          <div class="card"><div class="art">⛩</div><div class="label">結界返し</div></div>
+          <div class="card"><div class="art">🌙</div><div class="label">丑三つの刻</div></div>
+        </div>
+        <aside class="hint"><b>白蛇ノ神</b>召喚には素材が2体必要です。現在の場では召喚できません。</aside>
+      </div>
+    </footer>
+  </main>
+</body>
+</html>

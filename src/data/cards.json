@@ -1,0 +1,22 @@
+[
+  {"id":"kodama","name":"木霊","type":"monster","stars":1,"attack":400,"defense":1200,"effect":"gain-life-on-destroy","text":"破壊された時、自分のLPを300回復する。","art":"assets/cards/kodama.svg"},
+  {"id":"pipe-fox","name":"管狐","type":"monster","stars":2,"attack":900,"defense":700,"effect":"draw-on-summon","text":"召喚した時、カードを1枚引く。","art":"assets/cards/pipe-fox.svg"},
+  {"id":"chochin","name":"提灯小僧","type":"monster","stars":3,"attack":800,"defense":1400,"effect":null,"text":"闇夜を照らす、いたずら好きの妖。","art":"assets/cards/chochin.svg"},
+  {"id":"nekomata","name":"猫又","type":"monster","stars":3,"attack":1200,"defense":1000,"effect":"grave-boost","text":"自分の墓地にモンスターがいる間、攻撃力が200上がる。","art":"assets/cards/nekomata.svg"},
+  {"id":"kamaitachi","name":"鎌鼬","type":"monster","stars":4,"attack":1600,"defense":900,"effect":null,"text":"風より速く駆け、鋭い鎌で切り裂く。","art":"assets/cards/kamaitachi.svg"},
+  {"id":"kappa","name":"河童武者","type":"monster","stars":4,"attack":1500,"defense":1700,"effect":null,"text":"川辺の戦を知り尽くした妖怪武者。","art":"assets/cards/kappa.svg"},
+  {"id":"jorogumo","name":"絡新婦","type":"monster","stars":4,"attack":1400,"defense":1800,"effect":"weaken-on-flip","text":"裏側から表になった時、攻撃した相手の攻撃力を300下げる。","art":"assets/cards/jorogumo.svg"},
+  {"id":"nurikabe","name":"塗壁","type":"monster","stars":4,"attack":600,"defense":2200,"effect":null,"text":"進む者を拒む、堅牢な妖の壁。","art":"assets/cards/nurikabe.svg"},
+  {"id":"karasu-tengu","name":"烏天狗","type":"monster","stars":5,"attack":2000,"defense":1400,"effect":null,"text":"素材1体で召喚。山風を操る剣客。","art":"assets/cards/karasu-tengu.svg"},
+  {"id":"great-tengu","name":"大天狗","type":"monster","stars":6,"attack":2300,"defense":1800,"effect":null,"text":"素材1体で召喚。霊峰を統べる妖将。","art":"assets/cards/great-tengu.svg"},
+  {"id":"white-serpent","name":"白蛇ノ神","type":"monster","stars":7,"attack":2500,"defense":2100,"effect":"gain-life-on-summon","text":"素材2体で召喚。召喚時にLPを500回復する。","art":"assets/cards/white-serpent.svg"},
+  {"id":"shuten-doji","name":"酒呑童子","type":"monster","stars":8,"attack":2800,"defense":2300,"effect":null,"text":"素材2体で召喚。百鬼を震わせる鬼の首領。","art":"assets/cards/shuten-doji.svg"},
+  {"id":"purifying-talisman","name":"破魔の札","type":"spell","effect":"destroy-monster","text":"表側モンスター1体を破壊する。","art":"assets/cards/purifying-talisman.svg"},
+  {"id":"moonlit-rite","name":"月影の儀","type":"spell","effect":"boost-monster","text":"自分のモンスター1体の攻撃力を500上げる。","art":"assets/cards/moonlit-rite.svg"},
+  {"id":"spirit-return","name":"魂返し","type":"spell","effect":"revive-monster","text":"墓地の星4以下のモンスター1体を守備表示で戻す。","art":"assets/cards/spirit-return.svg"},
+  {"id":"night-parade","name":"百鬼夜行","type":"spell","effect":"draw-two","text":"カードを2枚引く。","art":"assets/cards/night-parade.svg"},
+  {"id":"seal-break","name":"封印破り","type":"spell","effect":"destroy-backrow","text":"相手の魔法・罠1枚を破壊する。","art":"assets/cards/seal-break.svg"},
+  {"id":"barrier-return","name":"結界返し","type":"trap","effect":"negate-attack","text":"相手の攻撃を1度だけ無効にする。","art":"assets/cards/barrier-return.svg"},
+  {"id":"mirror-curse","name":"鏡面の呪い","type":"trap","effect":"destroy-attacker","text":"攻撃してきたモンスターを破壊する。","art":"assets/cards/mirror-curse.svg"},
+  {"id":"midnight-substitute","name":"丑三つの身代り","type":"trap","effect":"halve-battle-damage","text":"受ける戦闘ダメージを半分にする。","art":"assets/cards/midnight-substitute.svg"}
+]

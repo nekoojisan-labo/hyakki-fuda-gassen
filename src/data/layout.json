@@ -1,0 +1,24 @@
+{
+  "desktop": {
+    "aspectMin": 1.05,
+    "card": {"w": 8.2, "h": 17.4},
+    "slots": {
+      "cpu-monster-1":{"x":38,"y":34},"cpu-monster-2":{"x":50,"y":34},"cpu-monster-3":{"x":62,"y":34},
+      "cpu-spell-trap-1":{"x":38,"y":15},"cpu-spell-trap-2":{"x":50,"y":15},"cpu-spell-trap-3":{"x":62,"y":15},
+      "player-monster-1":{"x":38,"y":65},"player-monster-2":{"x":50,"y":65},"player-monster-3":{"x":62,"y":65},
+      "player-spell-trap-1":{"x":38,"y":84},"player-spell-trap-2":{"x":50,"y":84},"player-spell-trap-3":{"x":62,"y":84},
+      "cpu-deck":{"x":80,"y":22},"cpu-grave":{"x":80,"y":37},"player-deck":{"x":20,"y":70},"player-grave":{"x":20,"y":55}
+    }
+  },
+  "mobile": {
+    "aspectMax": 1.049,
+    "card": {"w": 23, "h": 13.2},
+    "slots": {
+      "cpu-monster-1":{"x":22,"y":27},"cpu-monster-2":{"x":50,"y":27},"cpu-monster-3":{"x":78,"y":27},
+      "cpu-spell-trap-1":{"x":22,"y":12},"cpu-spell-trap-2":{"x":50,"y":12},"cpu-spell-trap-3":{"x":78,"y":12},
+      "player-monster-1":{"x":22,"y":61},"player-monster-2":{"x":50,"y":61},"player-monster-3":{"x":78,"y":61},
+      "player-spell-trap-1":{"x":22,"y":76},"player-spell-trap-2":{"x":50,"y":76},"player-spell-trap-3":{"x":78,"y":76},
+      "cpu-deck":{"x":91,"y":39},"cpu-grave":{"x":91,"y":48},"player-deck":{"x":9,"y":48},"player-grave":{"x":9,"y":39}
+    }
+  }
+}

@@ -14,6 +14,7 @@ for (const [owner, deck] of Object.entries(decks)) {
   for (const cardId of deck) if (!ids.has(cardId)) errors.push(`${owner}デッキの未定義ID: ${cardId}`);
 }
 for (const card of cards) {
+  if (card.art.endsWith(".svg")) errors.push(`${card.id}が簡易SVGを参照しています: ${card.art}`);
   try { await access(new URL(card.art, root)); } catch { errors.push(`${card.id}の画像がありません: ${card.art}`); }
 }
 for (const asset of [

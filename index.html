@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="src/styles/game.css">
   <link rel="stylesheet" href="src/styles/responsive-fixes.css">
   <link rel="stylesheet" href="src/styles/polish.css">
+  <link rel="stylesheet" href="src/styles/gameplay-v2.css">
 </head>
 <body>
   <main id="game" class="game-shell" aria-live="polite">
@@ -24,10 +25,20 @@
     </header>
 
     <section id="battlefield" class="battlefield" aria-label="対戦盤面">
-      <img class="battlefield-art" src="assets/backgrounds/shrine-battlefield.svg" alt="月夜の廃神社">
+      <img class="battlefield-art battlefield-art-desktop" src="assets/backgrounds/shrine-battlefield-desktop.png" alt="月夜の廃神社">
+      <img class="battlefield-art battlefield-art-mobile" src="assets/backgrounds/shrine-battlefield-mobile.png" alt="">
       <div class="battle-shade"></div>
       <div id="slot-layer" class="slot-layer"></div>
       <div id="effect-layer" class="effect-layer" aria-hidden="true"></div>
+      <div id="event-stage" class="event-stage" role="status" aria-live="assertive" hidden>
+        <img id="event-icon" src="assets/effects/turn.svg" alt="">
+        <div><small id="event-type">進行</small><strong id="event-message">あなたのターン</strong></div>
+      </div>
+      <section id="combat-preview" class="combat-preview" aria-live="polite" hidden>
+        <small>戦闘予測</small>
+        <div><b id="preview-attacker">攻撃側</b><strong id="preview-attack">0</strong><em>VS</em><strong id="preview-defense">0</strong><b id="preview-defender">対象</b></div>
+        <p id="preview-result"></p><span id="preview-warning"></span>
+      </section>
       <div class="phase-rail" aria-label="現在のフェーズ"><span>DRAW</span><span id="phase-main">MAIN</span><span id="phase-battle">BATTLE</span></div>
       <div class="pile-label cpu-deck-label">山札 <b id="cpu-deck">15</b></div>
       <div class="pile-label cpu-grave-label">墓地 <b id="cpu-grave">0</b></div>
@@ -43,17 +54,27 @@
         <div class="life"><span>LP</span><b id="player-life">4000</b></div>
       </div>
       <div id="next-hint" class="next-hint"><b>次の操作</b><span>光っているカードを選んでください</span></div>
-      <div id="message" class="message">カードを選ぶと、ここに能力と操作方法が表示されます</div>
+      <section id="card-inspector" class="card-inspector" aria-live="polite">
+        <header><span id="inspector-kind">操作ガイド</span><strong id="inspector-name">カードを選んでください</strong><em id="inspector-keyword">効果をここに表示</em></header>
+        <div class="effect-facts">
+          <p><b>条件</b><span id="inspector-condition">手札のカードを選択</span></p>
+          <p><b>対象</b><span id="inspector-target">—</span></p>
+          <p><b>結果</b><span id="inspector-result">カードの効果と使い方を確認できます</span></p>
+        </div>
+        <div id="inspector-availability" class="availability">現在の操作に合わせて、使える対象だけが光ります</div>
+      </section>
+      <div id="message" class="message">まず手札からカードを選んでください</div>
       <div id="hand" class="hand" aria-label="手札"></div>
       <div class="commands">
         <button id="attack-position" type="button">攻撃表示</button>
         <button id="set-position" type="button">裏側守備</button>
         <button id="activate" type="button">効果発動</button>
         <button id="battle-phase" type="button">バトルへ</button>
+        <button id="attack-confirm" class="attack-confirm" type="button">攻撃実行</button>
         <button id="direct-attack" type="button">直接攻撃</button>
         <button id="end-turn" class="primary" type="button">ターン終了</button>
       </div>
-      <details class="battle-log"><summary>対戦ログ</summary><ol id="log"></ol></details>
+      <details class="battle-log" open><summary>直近の出来事</summary><ol id="log"></ol></details>
     </section>
   </main>
 
@@ -81,6 +102,15 @@
       <article><i>伍</i><h3>バトル</h3><p>「バトルへ」→自分の攻撃表示モンスター→攻撃対象の順で選びます。相手がいなければ直接攻撃です。</p></article>
       <article><i>陸</i><h3>ダメージ</h3><p>攻撃表示同士は低い側が破壊され、差がLPダメージになります。守備力が高い相手を攻撃すると差分を受けます。</p></article>
     </div>
+    <section class="help-clarity">
+      <h3>迷わないための画面の見方</h3>
+      <div>
+        <p><b>1. カード詳細</b><span>カードを選ぶと、発動条件・対象・結果・現在使えるかを表示します。</span></p>
+        <p><b>2. 戦闘予測</b><span>攻撃側と対象を選んだ後、数値と結果を確認して「攻撃実行」で確定します。</span></p>
+        <p><b>3. 直近の出来事</b><span>召喚・効果・罠・ダメージは中央へ順番に出て、履歴から読み返せます。</span></p>
+      </div>
+    </section>
+    <section class="help-keywords"><b>主な効果</b><span>ドロー</span><span>回復</span><span>貫通</span><span>反転</span><span>強化</span><span>弱体</span><span>破壊</span><span>無効</span></section>
     <section class="turn-flow"><b>1ターンの流れ</b><span>カードを引く</span><em>→</em><span>召喚・魔法・罠</span><em>→</em><span>攻撃</span><em>→</em><span>ターン終了</span></section>
     <footer><button id="help-start" class="primary" type="button">ヒントを表示してゲームへ戻る</button></footer>
   </dialog>

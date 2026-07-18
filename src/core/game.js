@@ -9,6 +9,10 @@ function otherActor(actor) {
   return actor === "player" ? "cpu" : "player";
 }
 
+function actorName(actor) {
+  return actor === "player" ? "あなた" : "CPU";
+}
+
 function makeRng(seed) {
   let value = seed >>> 0;
   return () => {
@@ -38,21 +42,29 @@ function createPlayer(deck) {
   };
 }
 
-function appendLog(state, message) {
+function appendLog(state, message, meta = {}) {
   state.log = [message, ...state.log].slice(0, 12);
+  state.events ??= [];
+  state.nextEventId ??= 1;
+  state.events = [...state.events, { id: state.nextEventId++, message, ...meta }].slice(-36);
 }
 
-function drawInto(state, actor, amount = 1) {
+function drawInto(state, actor, amount = 1, announce = true) {
   const player = state.players[actor];
+  let drawn = 0;
   for (let count = 0; count < amount; count += 1) {
     const cardId = player.deck.shift();
     if (!cardId) {
       state.winner = otherActor(actor);
       state.reason = `${actor === "player" ? "あなた" : "CPU"}がドローできませんでした`;
-      return;
+      appendLog(state, `${actorName(actor)}は山札切れでドローできません`, { tone: "danger", effect: "destroy", anchor: "center" });
+      return drawn;
     }
     player.hand.push({ uid: `${actor}-${state.nextUid++}`, cardId });
+    drawn += 1;
   }
+  if (announce && drawn) appendLog(state, `${actorName(actor)}はカードを${drawn}枚引きました`, { tone: "info", effect: "draw", anchor: `${actor}-deck` });
+  return drawn;
 }
 
 function requireTurn(state, actor, phase) {
@@ -75,7 +87,7 @@ export function createGame({ cards, decks, seed = Date.now() }) {
   const cardMap = Object.fromEntries(cards.map((card) => [card.id, card]));
   const random = makeRng(seed);
   const state = {
-    version: 1,
+    version: 2,
     cards: cardMap,
     players: {
       player: createPlayer(shuffle(decks.player, random)),
@@ -83,13 +95,15 @@ export function createGame({ cards, decks, seed = Date.now() }) {
     },
     turn: { number: 1, actor: "player", phase: "main" },
     nextUid: 1,
+    nextEventId: 1,
     winner: null,
     reason: null,
-    log: []
+    log: [],
+    events: []
   };
-  drawInto(state, "player", 5);
-  drawInto(state, "cpu", 5);
-  appendLog(state, "先攻。メインフェーズから開始します");
+  drawInto(state, "player", 5, false);
+  drawInto(state, "cpu", 5, false);
+  appendLog(state, "あなたの先攻。メインフェーズ開始", { tone: "turn", effect: "turn", anchor: "center" });
   return state;
 }
 
@@ -103,7 +117,7 @@ export function beginTurn(inputState, actor) {
   drawInto(state, actor, 1);
   if (!state.winner) {
     state.turn.phase = "main";
-    appendLog(state, `${actor === "player" ? "あなた" : "CPU"}のターン`);
+    appendLog(state, `${actorName(actor)}のメインフェーズ`, { tone: "turn", effect: "turn", anchor: "center" });
   }
   return state;
 }
@@ -125,6 +139,7 @@ export function summonMonster(inputState, { actor, handIndex, zoneIndex, positio
     if (!player.monsters[slot]) throw new Error("素材にできない枠が含まれています");
   }
   for (const slot of uniqueSlots) {
+    appendLog(state, `${state.cards[player.monsters[slot].cardId].name}を召喚素材にしました`, { tone: "info", effect: "destroy", anchor: `${actor}-monster-${slot + 1}` });
     player.graveyard.push(player.monsters[slot]);
     player.monsters[slot] = null;
   }
@@ -137,9 +152,26 @@ export function summonMonster(inputState, { actor, handIndex, zoneIndex, positio
     attacked: false
   };
   player.normalSummoned = true;
-  appendLog(state, `${actor === "player" ? "あなた" : "CPU"}は${card.name}を${position === "attack" ? "攻撃表示で召喚" : "裏側守備でセット"}`);
-  if (card.effect === "draw-on-summon" && position === "attack") drawInto(state, actor, 1);
-  if (card.effect === "gain-life-on-summon" && position === "attack") player.life += 500;
+  appendLog(state, `${actorName(actor)}は${card.name}を${position === "attack" ? "攻撃表示で召喚" : "裏側守備でセット"}`, { tone: "summon", effect: "summon", anchor: `${actor}-monster-${zoneIndex + 1}`, cardId: card.id });
+  if (position === "attack" && card.effect === "draw-on-summon") {
+    const drawn = drawInto(state, actor, 1, false);
+    if (drawn) appendLog(state, `${card.name}「${card.effectName}」で${drawn}枚ドロー`, { tone: "effect", effect: "draw", anchor: `${actor}-monster-${zoneIndex + 1}`, cardId: card.id });
+  }
+  if (position === "attack" && card.effect === "gain-life-on-summon") {
+    player.life += 500;
+    appendLog(state, `${card.name}「${card.effectName}」でLPを500回復`, { tone: "heal", effect: "heal", anchor: `${actor}-monster-${zoneIndex + 1}`, cardId: card.id });
+  }
+  if (position === "attack" && card.effect === "destroy-backrow-on-summon") {
+    const targetActor = otherActor(actor);
+    const targetSlot = state.players[targetActor].backrow.findIndex(Boolean);
+    if (targetSlot >= 0) {
+      const destroyed = state.cards[state.players[targetActor].backrow[targetSlot].cardId];
+      moveBackrowToGrave(state, targetActor, targetSlot);
+      appendLog(state, `${card.name}「${card.effectName}」で${destroyed.name}を破壊`, { tone: "effect", effect: "destroy", anchor: `${targetActor}-spell-trap-${targetSlot + 1}`, cardId: card.id });
+    } else {
+      appendLog(state, `${card.name}「${card.effectName}」は対象がなく不発`, { tone: "info", effect: "summon", anchor: `${actor}-monster-${zoneIndex + 1}`, cardId: card.id });
+    }
+  }
   return state;
 }
 
@@ -153,7 +185,7 @@ export function setBackrow(inputState, { actor, handIndex, zoneIndex }) {
   if (!card || !["spell", "trap"].includes(card.type)) throw new Error("魔法または罠を選んでください");
   const [setCard] = player.hand.splice(handIndex, 1);
   player.backrow[zoneIndex] = { ...setCard, faceDown: true, setTurn: state.turn.number };
-  appendLog(state, `${actor === "player" ? "あなた" : "CPU"}はカードを1枚伏せました`);
+  appendLog(state, actor === "player" ? `${card.name}を伏せました。次のターンから反応します` : "CPUは伏せ札を1枚セット", { tone: "set", effect: "trap", anchor: `${actor}-spell-trap-${zoneIndex + 1}`, cardId: actor === "player" ? card.id : undefined });
   return state;
 }
 
@@ -163,7 +195,11 @@ function moveMonsterToGrave(state, actor, slot) {
   const card = state.cards[monster.cardId];
   state.players[actor].graveyard.push(monster);
   state.players[actor].monsters[slot] = null;
-  if (card.effect === "gain-life-on-destroy") state.players[actor].life += 300;
+  appendLog(state, `${card.name}は破壊され墓地へ`, { tone: "danger", effect: "destroy", anchor: `${actor}-monster-${slot + 1}`, cardId: card.id });
+  if (card.effect === "gain-life-on-destroy") {
+    state.players[actor].life += 300;
+    appendLog(state, `${card.name}「${card.effectName}」でLPを300回復`, { tone: "heal", effect: "heal", anchor: `${actor}-monster-${slot + 1}`, cardId: card.id });
+  }
 }
 
 function moveBackrowToGrave(state, actor, slot) {
@@ -180,18 +216,25 @@ export function activateSpell(inputState, { actor, handIndex, targetActor = othe
   const item = player.hand[handIndex];
   const card = item && state.cards[item.cardId];
   if (!card || card.type !== "spell") throw new Error("魔法カードを選んでください");
+  appendLog(state, `${actorName(actor)}は${card.name}「${card.effectName}」を発動`, { tone: "spell", effect: "spell", anchor: "center", cardId: card.id });
   if (card.effect === "destroy-monster") {
-    if (!state.players[targetActor].monsters[targetSlot]) throw new Error("破壊するモンスターを選んでください");
+    const target = state.players[targetActor].monsters[targetSlot];
+    if (!target || target.faceDown) throw new Error("破壊する表側モンスターを選んでください");
     moveMonsterToGrave(state, targetActor, targetSlot);
   } else if (card.effect === "boost-monster") {
     const target = player.monsters[targetSlot];
-    if (!target) throw new Error("強化するモンスターを選んでください");
+    if (!target || target.faceDown) throw new Error("強化する表側モンスターを選んでください");
     target.attackMod += 500;
+    appendLog(state, `${state.cards[target.cardId].name}の攻撃力が500上昇`, { tone: "buff", effect: "buff", anchor: `${actor}-monster-${targetSlot + 1}`, cardId: target.cardId });
   } else if (card.effect === "draw-two") {
-    drawInto(state, actor, 2);
+    const drawn = drawInto(state, actor, 2, false);
+    if (drawn) appendLog(state, `${card.name}の効果でカードを${drawn}枚ドロー`, { tone: "effect", effect: "draw", anchor: `${actor}-deck`, cardId: card.id });
   } else if (card.effect === "destroy-backrow") {
-    if (!state.players[targetActor].backrow[targetSlot]) throw new Error("破壊する魔法・罠を選んでください");
+    const target = state.players[targetActor].backrow[targetSlot];
+    if (!target) throw new Error("破壊する伏せ札を選んでください");
+    const targetCard = state.cards[target.cardId];
     moveBackrowToGrave(state, targetActor, targetSlot);
+    appendLog(state, `${targetCard.name}を破壊して墓地へ`, { tone: "danger", effect: "destroy", anchor: `${targetActor}-spell-trap-${targetSlot + 1}`, cardId: targetCard.id });
   } else if (card.effect === "revive-monster") {
     const openSlot = player.monsters.findIndex((monster) => !monster);
     const graveIndex = player.graveyard.findIndex((graveItem) => {
@@ -201,10 +244,10 @@ export function activateSpell(inputState, { actor, handIndex, targetActor = othe
     if (openSlot < 0 || graveIndex < 0) throw new Error("墓地から戻せるモンスターと空き枠が必要です");
     const [revived] = player.graveyard.splice(graveIndex, 1);
     player.monsters[openSlot] = { ...revived, position: "defense", faceDown: false, attacked: false, attackMod: 0 };
+    appendLog(state, `${state.cards[revived.cardId].name}を守備表示で蘇生`, { tone: "summon", effect: "summon", anchor: `${actor}-monster-${openSlot + 1}`, cardId: revived.cardId });
   }
   player.graveyard.push(item);
   player.hand.splice(handIndex, 1);
-  appendLog(state, `${card.name}を発動しました`);
   return state;
 }
 
@@ -214,19 +257,39 @@ function triggerAttackTrap(state, defenderActor, attackerActor, attackerSlot) {
   if (trapSlot < 0) return { negated: false, halveDamage: false };
   const trap = state.cards[backrow[trapSlot].cardId];
   moveBackrowToGrave(state, defenderActor, trapSlot);
-  appendLog(state, `${trap.name}が発動しました`);
+  appendLog(state, `${actorName(defenderActor)}の罠・${trap.name}「${trap.effectName}」が発動`, { tone: "trap", effect: "trap", anchor: `${defenderActor}-spell-trap-${trapSlot + 1}`, cardId: trap.id });
   if (trap.effect === "destroy-attacker") {
     moveMonsterToGrave(state, attackerActor, attackerSlot);
+    appendLog(state, `${trap.name}が攻撃モンスターを破壊し、攻撃を無効化`, { tone: "danger", effect: "destroy", anchor: `${attackerActor}-monster-${attackerSlot + 1}`, cardId: trap.id });
     return { negated: true, halveDamage: false };
   }
-  if (trap.effect === "negate-attack") return { negated: true, halveDamage: false };
+  if (trap.effect === "negate-attack") {
+    appendLog(state, `${trap.name}が攻撃を無効化`, { tone: "guard", effect: "guard", anchor: `${defenderActor}-monster-2`, cardId: trap.id });
+    return { negated: true, halveDamage: false };
+  }
+  appendLog(state, `${trap.name}により、この戦闘のダメージは半分`, { tone: "guard", effect: "guard", anchor: `${defenderActor}-monster-2`, cardId: trap.id });
   return { negated: false, halveDamage: trap.effect === "halve-battle-damage" };
 }
 
 function currentAttack(state, actor, monster) {
   const card = state.cards[monster.cardId];
   const graveBoost = card.effect === "grave-boost" && state.players[actor].graveyard.some((item) => state.cards[item.cardId].type === "monster") ? 200 : 0;
-  return card.attack + (monster.attackMod ?? 0) + graveBoost;
+  const fieldBoost = state.players[actor].monsters.some((ally) => ally && !ally.faceDown && state.cards[ally.cardId].effect === "field-boost") ? 200 : 0;
+  return card.attack + (monster.attackMod ?? 0) + graveBoost + fieldBoost;
+}
+
+function reduceBattleDamage(state, actor, amount, halveDamage = false) {
+  let result = halveDamage ? Math.floor(amount / 2) : amount;
+  const guarded = state.players[actor].monsters.some((monster) => monster && !monster.faceDown && state.cards[monster.cardId].effect === "battle-guard");
+  if (guarded) result = Math.max(0, result - 300);
+  return result;
+}
+
+function dealBattleDamage(state, actor, amount, halveDamage = false) {
+  const damage = reduceBattleDamage(state, actor, amount, halveDamage);
+  state.players[actor].life -= damage;
+  appendLog(state, `${actorName(actor)}に${damage}の戦闘ダメージ`, { tone: "damage", effect: "burst", anchor: "center", amount: damage });
+  return damage;
 }
 
 function checkLifeWinner(state) {
@@ -243,7 +306,7 @@ export function enterBattlePhase(inputState, actor) {
   requireTurn(inputState, actor, "main");
   const state = clone(inputState);
   state.turn.phase = "battle";
-  appendLog(state, "バトルフェーズ");
+  appendLog(state, `${actorName(actor)}のバトルフェーズ`, { tone: "turn", effect: "turn", anchor: "center" });
   return state;
 }
 
@@ -254,16 +317,17 @@ export function attack(inputState, { actor, attackerSlot, targetSlot = null }) {
   const attacker = state.players[actor].monsters[attackerSlot];
   if (!attacker || attacker.position !== "attack" || attacker.faceDown) throw new Error("攻撃表示のモンスターを選んでください");
   if (attacker.attacked) throw new Error("このモンスターは攻撃済みです");
+  const attackerCard = state.cards[attacker.cardId];
   const defenders = state.players[defenderActor].monsters;
   if (defenders.some(Boolean) && (targetSlot === null || !defenders[targetSlot])) throw new Error("攻撃対象を選んでください");
+  const declaredTarget = targetSlot === null ? "相手プレイヤー" : defenders[targetSlot].faceDown ? "裏側守備モンスター" : state.cards[defenders[targetSlot].cardId].name;
+  appendLog(state, `${attackerCard.name}が${declaredTarget}へ攻撃`, { tone: "attack", effect: "slash", anchor: targetSlot === null ? "center" : `${defenderActor}-monster-${targetSlot + 1}`, cardId: attackerCard.id });
   attacker.attacked = true;
   const trap = triggerAttackTrap(state, defenderActor, actor, attackerSlot);
   if (trap.negated) return state;
-  const attackValue = currentAttack(state, actor, attacker);
   if (!defenders.some(Boolean)) {
-    const damage = trap.halveDamage ? Math.floor(attackValue / 2) : attackValue;
-    state.players[defenderActor].life -= damage;
-    appendLog(state, `${damage}の直接ダメージ`);
+    const attackValue = currentAttack(state, actor, attacker);
+    dealBattleDamage(state, defenderActor, attackValue, trap.halveDamage);
     checkLifeWinner(state);
     return state;
   }
@@ -272,22 +336,82 @@ export function attack(inputState, { actor, attackerSlot, targetSlot = null }) {
   if (defender.faceDown) {
     defender.faceDown = false;
     defender.position = "defense";
-    if (defenderCard.effect === "weaken-on-flip") attacker.attackMod -= 300;
+    appendLog(state, `伏せられていた${defenderCard.name}が表になりました`, { tone: "reveal", effect: "reveal", anchor: `${defenderActor}-monster-${targetSlot + 1}`, cardId: defenderCard.id });
+    if (defenderCard.effect === "weaken-on-flip") {
+      attacker.attackMod -= 300;
+      appendLog(state, `${defenderCard.name}「${defenderCard.effectName}」で${attackerCard.name}の攻撃力が300低下`, { tone: "debuff", effect: "debuff", anchor: `${actor}-monster-${attackerSlot + 1}`, cardId: defenderCard.id });
+    }
+    if (defenderCard.effect === "draw-on-flip") {
+      const drawn = drawInto(state, defenderActor, 1, false);
+      if (drawn) appendLog(state, `${defenderCard.name}「${defenderCard.effectName}」で${actorName(defenderActor)}は${drawn}枚ドロー`, { tone: "effect", effect: "draw", anchor: `${defenderActor}-monster-${targetSlot + 1}`, cardId: defenderCard.id });
+      if (state.winner) return state;
+    }
   }
+  const attackValue = currentAttack(state, actor, attacker);
+  let defenderDestroyed = false;
   if (defender.position === "attack") {
     const defenderAttack = currentAttack(state, defenderActor, defender);
     const difference = attackValue - defenderAttack;
-    if (difference >= 0) moveMonsterToGrave(state, defenderActor, targetSlot);
+    appendLog(state, `攻撃力比較 ${attackValue} 対 ${defenderAttack}`, { tone: "compare", effect: "clash", anchor: `${defenderActor}-monster-${targetSlot + 1}` });
+    if (difference >= 0) {
+      moveMonsterToGrave(state, defenderActor, targetSlot);
+      defenderDestroyed = true;
+    }
     if (difference <= 0) moveMonsterToGrave(state, actor, attackerSlot);
-    if (difference !== 0) state.players[difference > 0 ? defenderActor : actor].life -= Math.abs(difference);
+    if (difference > 0) dealBattleDamage(state, defenderActor, difference, trap.halveDamage);
+    if (difference < 0) dealBattleDamage(state, actor, Math.abs(difference));
   } else {
     const difference = attackValue - defenderCard.defense;
-    if (difference > 0) moveMonsterToGrave(state, defenderActor, targetSlot);
-    if (difference < 0) state.players[actor].life -= trap.halveDamage ? Math.floor(Math.abs(difference) / 2) : Math.abs(difference);
+    appendLog(state, `攻撃力${attackValue} 対 守備力${defenderCard.defense}`, { tone: "compare", effect: "clash", anchor: `${defenderActor}-monster-${targetSlot + 1}` });
+    if (difference > 0) {
+      moveMonsterToGrave(state, defenderActor, targetSlot);
+      defenderDestroyed = true;
+      if (attackerCard.effect === "piercing") {
+        dealBattleDamage(state, defenderActor, difference, trap.halveDamage);
+        appendLog(state, `${attackerCard.name}「${attackerCard.effectName}」で守備を貫通`, { tone: "effect", effect: "slash", anchor: `${defenderActor}-monster-${targetSlot + 1}`, cardId: attackerCard.id });
+      }
+    }
+    if (difference < 0) dealBattleDamage(state, actor, Math.abs(difference));
   }
-  appendLog(state, `${state.cards[attacker.cardId].name}が攻撃しました`);
+  if (defenderCard.effect === "wall-recovery") {
+    state.players[defenderActor].life += 300;
+    appendLog(state, `${defenderCard.name}「${defenderCard.effectName}」でLPを300回復`, { tone: "heal", effect: "heal", anchor: `${defenderActor}-monster-${targetSlot + 1}`, cardId: defenderCard.id });
+  }
+  if (defenderDestroyed && attackerCard.effect === "rage-on-destroy" && state.players[actor].monsters[attackerSlot]) {
+    state.players[actor].monsters[attackerSlot].attackMod += 300;
+    appendLog(state, `${attackerCard.name}「${attackerCard.effectName}」で攻撃力が300上昇`, { tone: "buff", effect: "buff", anchor: `${actor}-monster-${attackerSlot + 1}`, cardId: attackerCard.id });
+  }
   checkLifeWinner(state);
   return state;
+}
+
+export function getBattlePreview(state, { actor, attackerSlot, targetSlot = null }) {
+  const defenderActor = otherActor(actor);
+  const attacker = state.players[actor].monsters[attackerSlot];
+  if (!attacker) return null;
+  const attackerCard = state.cards[attacker.cardId];
+  const attackValue = currentAttack(state, actor, attacker);
+  const defenders = state.players[defenderActor].monsters;
+  const trapWarning = state.players[defenderActor].backrow.some(Boolean);
+  if (!defenders.some(Boolean)) {
+    return { attackerName: attackerCard.name, attackValue, defenderName: "相手プレイヤー", defenderLabel: "DIRECT", defenderValue: 0, outcome: `${reduceBattleDamage(state, defenderActor, attackValue)}ダメージ`, trapWarning };
+  }
+  const defender = defenders[targetSlot];
+  if (!defender) return null;
+  if (defender.faceDown) {
+    return { attackerName: attackerCard.name, attackValue, defenderName: "裏側守備カード", defenderLabel: "DEF", defenderValue: null, outcome: "攻撃後に正体と結果が判明", trapWarning };
+  }
+  const defenderCard = state.cards[defender.cardId];
+  if (defender.position === "attack") {
+    const defenderValue = currentAttack(state, defenderActor, defender);
+    const difference = attackValue - defenderValue;
+    const outcome = difference > 0 ? `${defenderCard.name}を破壊・相手に${reduceBattleDamage(state, defenderActor, difference)}ダメージ` : difference < 0 ? `${attackerCard.name}が破壊・自分に${reduceBattleDamage(state, actor, Math.abs(difference))}ダメージ` : "相打ち・両方を破壊";
+    return { attackerName: attackerCard.name, attackValue, defenderName: defenderCard.name, defenderLabel: "ATK", defenderValue, outcome, trapWarning };
+  }
+  const difference = attackValue - defenderCard.defense;
+  const piercingDamage = difference > 0 && attackerCard.effect === "piercing" ? reduceBattleDamage(state, defenderActor, difference) : 0;
+  const outcome = difference > 0 ? `${defenderCard.name}を破壊${piercingDamage ? `・貫通${piercingDamage}ダメージ` : ""}` : difference < 0 ? `破壊なし・自分に${reduceBattleDamage(state, actor, Math.abs(difference))}ダメージ` : "破壊なし・ダメージなし";
+  return { attackerName: attackerCard.name, attackValue, defenderName: defenderCard.name, defenderLabel: "DEF", defenderValue: defenderCard.defense, outcome, trapWarning };
 }
 
 export function endTurn(inputState, actor) {

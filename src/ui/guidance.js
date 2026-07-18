@@ -18,9 +18,18 @@ export function getNextGuidance(state, selection) {
       if (selection.tributeSlots.length < needed) {
         return { text: `${selectedCard.name}には素材が${needed}体必要です。自分の場のモンスターを選んでください。`, targets: ["player-monsters"] };
       }
-      return { text: `${selectedCard.name}を出す場所として、金色に光るモンスター枠を押してください。`, targets: ["open-player-monsters"] };
+      return { text: `${selectedCard.name}を出す場所として、金色に光るモンスター枠を押してください。`, targets: ["open-player-monsters", ...selection.tributeSlots.map((index) => `player-monster-${index}`)] };
     }
-    if (selectedCard?.type === "spell") return { text: `${selectedCard.name}の「効果発動」を押してください。対象が必要なら先に盤面のカードを選びます。`, targets: ["activate"] };
+    if (selectedCard?.type === "spell") {
+      const targetMap = {
+        "destroy-monster": "cpu-monsters",
+        "boost-monster": "player-monsters",
+        "destroy-backrow": "cpu-backrow"
+      };
+      const target = targetMap[selectedCard.effect];
+      if (target && selection.targetSlot === null) return { text: `${selectedCard.name}の対象として、光っている盤面カードを選んでください。`, targets: [target] };
+      return { text: `${selectedCard.name}の条件と結果を確認し、「効果発動」で確定してください。`, targets: ["activate"] };
+    }
     if (selectedCard?.type === "trap") return { text: `${selectedCard.name}を伏せるため、金色に光る魔法・罠枠を押してください。`, targets: ["open-player-backrow"] };
 
     if (!player.normalSummoned) {
@@ -41,7 +50,10 @@ export function getNextGuidance(state, selection) {
     if (attackers.length) return { text: "攻撃できる自分のモンスターを選んでください。", targets: attackers.map((index) => `player-monster-${index}`) };
     return { text: "攻撃できるモンスターがいません。「ターン終了」を押してください。", targets: ["end-turn"] };
   }
-  if (state.players.cpu.monsters.some(Boolean)) return { text: "攻撃する相手モンスターを選んでください。", targets: ["cpu-monsters"] };
+  if (state.players.cpu.monsters.some(Boolean)) {
+    if (selection.targetSlot === null) return { text: "攻撃する相手モンスターを選んでください。まだ攻撃は実行されません。", targets: ["cpu-monsters"] };
+    return { text: "戦闘予測を確認し、「攻撃実行」で確定してください。", targets: ["attack-confirm"] };
+  }
   return { text: "相手の場が空です。「直接攻撃」を押してください。", targets: ["direct-attack"] };
 }
 

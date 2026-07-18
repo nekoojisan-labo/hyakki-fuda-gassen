@@ -1,4 +1,4 @@
-const SAVE_KEY = "hyakki-fuda-gassen-turn-start-v1";
+const SAVE_KEY = "hyakki-fuda-gassen-turn-start-v2";
 
 export function saveTurnStart(state, storage = localStorage) {
   storage.setItem(SAVE_KEY, JSON.stringify(state));
@@ -9,7 +9,7 @@ export function loadTurnStart(storage = localStorage) {
   if (!raw) return null;
   try {
     const state = JSON.parse(raw);
-    if (state?.version !== 1 || !state.players?.player || !state.players?.cpu || !state.turn) throw new Error("invalid save");
+    if (state?.version !== 2 || !state.players?.player || !state.players?.cpu || !state.turn) throw new Error("invalid save");
     return state;
   } catch {
     storage.removeItem(SAVE_KEY);

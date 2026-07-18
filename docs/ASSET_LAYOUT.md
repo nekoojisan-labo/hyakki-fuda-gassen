@@ -6,11 +6,11 @@
 
 | パーツ | フォルダ | 変更時の注意 |
 |---|---|---|
-| 神社の背景 | `assets/backgrounds/` | カード枠や文字を描き込まない |
+| 神社の背景 | `assets/backgrounds/shrine-battlefield-desktop.png`、`shrine-battlefield-mobile.png` | カード枠や文字を描き込まない。画面比率で切り替える |
 | プレイヤー・CPU人物 | `assets/characters/` | 円形マスクで表示し、盤面背景へ焼き込まない |
 | 20種類のカード絵 | `assets/cards/comp-art/`、`assets/cards/final/` | カードIDと同じPNGファイル名にする |
 | カード枠・カード裏 | `assets/ui/` | 全カードで共通利用する |
-| 斬撃・衝撃など | `assets/effects/` | 対象カードの中心へ追従させる |
+| 召喚・術式・斬撃・衝撃など14種 | `assets/effects/` | イベントの `effect` と `anchor` から対象中心へ追従させる |
 
 カード画像は `src/data/cards.json` の `art` で対応付ける。画像を増やしたら `npm run validate` で欠落、ID違い、簡易SVGへの参照を検出できる。
 

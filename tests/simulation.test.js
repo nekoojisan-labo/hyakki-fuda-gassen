@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { attack, createGame, endTurn, enterBattlePhase, getTributeCount, setBackrow, summonMonster } from "../src/core/game.js";
-import { runCpuTurn } from "../src/core/cpu.js";
+import { runCpuTurn, runCpuTurnSteps } from "../src/core/cpu.js";
 
 const cards = JSON.parse(await readFile(new URL("../src/data/cards.json", import.meta.url)));
 const decks = JSON.parse(await readFile(new URL("../src/data/decks.json", import.meta.url)));
@@ -58,4 +58,18 @@ test("a complete CPU match reaches a declared winner for multiple shuffled decks
     assert.ok(["player", "cpu"].includes(state.winner));
     assert.ok(state.reason);
   }
+});
+
+test("CPU actions expose ordered snapshots for the UI narration queue", () => {
+  const playerTurn = createGame({ cards, decks, seed: 31 });
+  const cpuTurn = endTurn(playerTurn, "player");
+  const steps = runCpuTurnSteps(cpuTurn);
+
+  assert.ok(steps.length >= 2);
+  for (let index = 1; index < steps.length; index += 1) {
+    assert.ok(steps[index].events.at(-1).id >= steps[index - 1].events.at(-1).id);
+  }
+  const final = steps.at(-1);
+  assert.ok(final.winner || final.turn.actor === "player");
+  assert.deepEqual(final, runCpuTurn(cpuTurn));
 });

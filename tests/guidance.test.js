@@ -33,6 +33,16 @@ test("battle guidance progresses from attacker to direct attack", () => {
   assert.deepEqual(getNextGuidance(state, { ...emptySelection, attackerSlot: 0 }).targets, ["direct-attack"]);
 });
 
+test("battle guidance requires target confirmation before attack", () => {
+  let state = createGame({ cards, decks, seed: 12 });
+  state.players.player.hand = [{ uid: "a", cardId: "kamaitachi" }];
+  state = summonMonster(state, { actor: "player", handIndex: 0, zoneIndex: 0 });
+  state.players.cpu.monsters[0] = { uid: "b", cardId: "pipe-fox", position: "attack", faceDown: false, attacked: false, attackMod: 0 };
+  state = enterBattlePhase(state, "player");
+  assert.deepEqual(getNextGuidance(state, { ...emptySelection, attackerSlot: 0 }).targets, ["cpu-monsters"]);
+  assert.deepEqual(getNextGuidance(state, { ...emptySelection, attackerSlot: 0, targetSlot: 0 }).targets, ["attack-confirm"]);
+});
+
 test("hint preference persists", () => {
   const values = new Map();
   const storage = { getItem: (key) => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) };

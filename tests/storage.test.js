@@ -9,13 +9,13 @@ function memoryStorage() {
 
 test("turn-start save round trips", () => {
   const storage = memoryStorage();
-  const state = { version: 1, players: { player: {}, cpu: {} }, turn: { actor: "player" } };
+  const state = { version: 2, players: { player: {}, cpu: {} }, turn: { actor: "player" } };
   saveTurnStart(state, storage);
   assert.deepEqual(loadTurnStart(storage), state);
 });
 
 test("invalid save is removed and ignored", () => {
   const storage = memoryStorage();
-  storage.setItem("hyakki-fuda-gassen-turn-start-v1", "not-json");
+  storage.setItem("hyakki-fuda-gassen-turn-start-v2", "not-json");
   assert.equal(loadTurnStart(storage), null);
 });

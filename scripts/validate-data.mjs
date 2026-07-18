@@ -15,16 +15,19 @@ for (const [owner, deck] of Object.entries(decks)) {
 }
 for (const card of cards) {
   if (card.art.endsWith(".svg")) errors.push(`${card.id}が簡易SVGを参照しています: ${card.art}`);
+  for (const field of ["effect", "effectName", "keyword", "condition", "target", "result"]) {
+    if (typeof card[field] !== "string" || !card[field].trim()) errors.push(`${card.id}の${field}が未定義です`);
+  }
   try { await access(new URL(card.art, root)); } catch { errors.push(`${card.id}の画像がありません: ${card.art}`); }
 }
 for (const asset of [
-  "assets/backgrounds/shrine-battlefield.svg",
+  "assets/backgrounds/shrine-battlefield-desktop.png",
+  "assets/backgrounds/shrine-battlefield-mobile.png",
   "assets/characters/cpu-onmyoji.png",
   "assets/characters/player-onmyoji.png",
   "assets/ui/card-back.svg",
   "assets/ui/card-frame.svg",
-  "assets/effects/slash.svg",
-  "assets/effects/burst.svg"
+  ...["turn", "summon", "draw", "spell", "trap", "slash", "clash", "burst", "destroy", "heal", "buff", "debuff", "reveal", "guard"].map((id) => `assets/effects/${id}.svg`)
 ]) {
   try { await access(new URL(asset, root)); } catch { errors.push(`画面パーツがありません: ${asset}`); }
 }

@@ -237,7 +237,12 @@ function renderInspector() {
   elements["inspector-result"].textContent = card.result;
 
   let status = { usable: true, reason: "使用できます" };
-  if (selection.attackerSlot !== null && !selectedHandCard()) status = { usable: true, reason: selection.targetSlot === null ? "攻撃対象を選んでください" : "戦闘予測を確認し「攻撃実行」で確定できます" };
+  if (selection.attackerSlot !== null && !selectedHandCard()) {
+    const hasDefenders = state.players.cpu.monsters.some(Boolean);
+    status = hasDefenders
+      ? { usable: true, reason: selection.targetSlot === null ? "攻撃対象を選んでください" : "戦闘予測を確認し「攻撃実行」で確定できます" }
+      : { usable: true, reason: "戦闘予測を確認し「直接攻撃」で確定できます" };
+  }
   else if (card.type === "monster") {
     const tributeCount = getTributeCount(card);
     const available = state.players.player.monsters.filter(Boolean).length;
@@ -336,7 +341,10 @@ function handleSlotClick(actor, zoneType, index) {
         selection.handIndex = null;
         selection.attackerSlot = index;
         selection.targetSlot = null;
-        setMessage(`${cardMap[occupant.cardId].name}を攻撃側に選択。次に相手モンスターを選んでください`);
+        const hasDefenders = state.players.cpu.monsters.some(Boolean);
+        setMessage(hasDefenders
+          ? `${cardMap[occupant.cardId].name}を攻撃側に選択。次に相手モンスターを選んでください`
+          : `${cardMap[occupant.cardId].name}を攻撃側に選択。戦闘予測を確認して「直接攻撃」を押してください`);
       }
     } else if (zoneType === "monster" && actor === "cpu" && state.turn.phase === "battle" && selection.attackerSlot !== null && state.players.cpu.monsters[index]) {
       selection.targetSlot = index;
